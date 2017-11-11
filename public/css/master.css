@@ -1,0 +1,11 @@
+body {
+  padding-top: 70px;
+}
+
+i.icon.code {
+  font-size: 2em !important;
+}
+
+#deleteForm {
+  display: inline;
+}
