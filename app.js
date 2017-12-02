@@ -19,12 +19,6 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(expressSanitizer());
 
 // mongoose/model config
-var blogSchema = new mongoose.Schema({
-  title: String,
-  image: String,
-  body: String,
-  created: {type: Date, default: Date.now}
-});
 
 var userSchema = new mongoose.Schema({
   name: String,
@@ -32,9 +26,22 @@ var userSchema = new mongoose.Schema({
   password: String
 });
 userSchema.plugin(passportLocalMongoose);
-
-var Blog = mongoose.model("Blog", blogSchema);
 var User = mongoose.model("User", userSchema);
+
+var blogSchema = new mongoose.Schema({
+  title: String,
+  image: String,
+  body: String,
+  author: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    username: String
+  },
+  created: {type: Date, default: Date.now}
+});
+var Blog = mongoose.model("Blog", blogSchema);
 
 app.use(expressSession({
   secret: "mysecret",
@@ -77,13 +84,18 @@ app.get("/blogs/new", isLoggedIn, function (req, res) {
 
 // create
 app.post("/blogs", isLoggedIn, function (req, res) {
-  let blog = req.body.blog;
-  console.log(blog.body);
-  blog.body = req.sanitize(blog.body);
-  console.log(blog.body);
+  let blog = {title: req.body.blog.title, image: req.body.blog.image};
+  console.log(req.body.blog.body);
+  blog.body = req.sanitize(req.body.blog.body);
+  let author = {
+    username: req.user.username,
+    id: req.user._id
+  };
+  blog.author = author;
+  console.log(blog);
   Blog.create(blog, function (err, newBlog) {
     if (err) {
-      console.log("OOps");
+      console.log(err);
       res.render("new");
     } else {
       res.redirect("/blogs");
@@ -105,7 +117,7 @@ app.get("/blogs/:id", function (req, res) {
 });
 
 // Edit
-app.get("/blogs/:id/edit", function (req, res) {
+app.get("/blogs/:id/edit", checkAuthor, function (req, res) {
   let id = req.params.id;
   Blog.findById(id, function (err, blog) {
     if (err) {
@@ -118,7 +130,7 @@ app.get("/blogs/:id/edit", function (req, res) {
 });
 
 // Update
-app.put("/blogs/:id", function (req, res) {
+app.put("/blogs/:id", checkAuthor, function (req, res) {
   Blog.findByIdAndUpdate(req.params.id, req.body.blog, function (err, updatedBlog) {
     if (err) {
       console.log("OOps");
@@ -130,7 +142,7 @@ app.put("/blogs/:id", function (req, res) {
 });
 
 // Delete
-app.delete("/blogs/:id", function (req, res) {
+app.delete("/blogs/:id", checkAuthor, function (req, res) {
   Blog.findByIdAndRemove(req.params.id, function (err) {
     if (err) {
       res.redirect("/blogs");
@@ -179,6 +191,23 @@ function isLoggedIn(req, res, next) {
     return next();
   } else {
     res.redirect("/login");
+  }
+}
+
+function checkAuthor(req, res, next) {
+  if (req.isAuthenticated()) {
+    Blog.findById(req.params.id, function (err, blog) {
+      if (err) {
+        console.log(err);
+        res.redirect("/blogs");
+      } else {
+        if (blog.author.id.equals(req.user._id)) {
+          next();
+        } else {
+          res.redirect("/login");
+        }
+      }
+    });
   }
 }
 
