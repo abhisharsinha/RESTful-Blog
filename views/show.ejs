@@ -8,7 +8,14 @@
     <div class="item">
       <img class="ui centered rounded image" src="<%= blog.image %>" alt="<%= blog.title %>">
       <div class="content">
-        <span><%= blog.created.toDateString() %></span>
+        <div class="ui equal width grid">
+          <div class="left floated column">
+            <span><%= blog.created.toDateString() %></span>
+          </div>
+        <div class="right aligned column">
+            <span>by Abhishar</span>
+          </div>
+        </div>
       </div>
       <div class="description">
         <p><%- blog.body %></p>

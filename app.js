@@ -5,6 +5,7 @@ const methodOverride = require('method-override');
 const expressSanitizer = require('express-sanitizer');
 const app = express();
 
+
 // app config
 mongoose.connect("mongodb://localhost/rest_blog");
 app.set("view engine", "ejs");
@@ -21,7 +22,13 @@ var blogSchema = new mongoose.Schema({
   created: {type: Date, default: Date.now}
 });
 
+var userSchema = new mongoose.Schema({
+  username: String,
+  password: String
+});
+
 var Blog = mongoose.model("Blog", blogSchema);
+var User = mongoose.model("User", userSchema);
 
 app.get("/", function (req, res) {
   res.redirect("/blogs");
@@ -109,20 +116,7 @@ app.delete("/blogs/:id", function (req, res) {
   });
 });
 
-// Tesing code begin
-/*
-Blog.create({
-  title: "test blog",
-  body: "TL;DR;"
-}, function (err) {
-  console.log("Created");
-});
 
-Blog.find({}, function (err, blogs) {
-  console.log(blogs);
-});
-*/
-// Testing ends
 
 app.listen(3000, "localhost", function () {
   console.log("Listening on port 3000");

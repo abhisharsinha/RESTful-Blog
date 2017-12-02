@@ -13,8 +13,17 @@
           </div>
           <div class="content">
             <a href="/blogs/<%= blog._id %>" class="header"><%= blog.title %></h3>
-            <div class="meta">
-              <span><%= blog.created.toDateString() %></span>
+            <div class="ui equal width grid">
+              <div class="column">
+                <div class="meta">
+                  <span>-by Abhishar</span>
+                </div>
+              </div>
+              <div class="column right aligned">
+                <div class="meta">
+                  <span><%= blog.created.toDateString() %></span>
+                </div>
+              </div>
             </div>
             <div class="description">
               <p><%- blog.body.substring(0, 100) %>...</p>
