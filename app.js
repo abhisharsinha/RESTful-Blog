@@ -3,6 +3,10 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const methodOverride = require('method-override');
 const expressSanitizer = require('express-sanitizer');
+const passport = require('passport');
+const localStrategy = require('passport-local');
+const expressSession = require('express-session');
+const passportLocalMongoose = require('passport-local-mongoose');
 const app = express();
 
 
@@ -23,13 +27,33 @@ var blogSchema = new mongoose.Schema({
 });
 
 var userSchema = new mongoose.Schema({
+  name: String,
   username: String,
   password: String
 });
+userSchema.plugin(passportLocalMongoose);
 
 var Blog = mongoose.model("Blog", blogSchema);
 var User = mongoose.model("User", userSchema);
 
+app.use(expressSession({
+  secret: "mysecret",
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new localStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+
+app.use(function (req, res, next) {
+  res.locals.currentUser = req.user;
+  next();
+});
+
+// ROUTES
 app.get("/", function (req, res) {
   res.redirect("/blogs");
 });
@@ -47,12 +71,12 @@ app.get("/blogs", function (req, res) {
 });
 
 // New
-app.get("/blogs/new", function (req, res) {
+app.get("/blogs/new", isLoggedIn, function (req, res) {
   res.render("new");
 });
 
 // create
-app.post("/blogs", function (req, res) {
+app.post("/blogs", isLoggedIn, function (req, res) {
   let blog = req.body.blog;
   console.log(blog.body);
   blog.body = req.sanitize(blog.body);
@@ -116,8 +140,49 @@ app.delete("/blogs/:id", function (req, res) {
   });
 });
 
+// Adding login routes
+app.get("/signup", function (req, res) {
+  res.render("signup");
+});
+
+app.post("/signup", function (req, res) {
+  let user = req.body.user;
+  User.register(new User({name: user.name, username: user.username}), user.password, function (err, user) {
+    if (err) {
+      console.log(err);
+      res.redirect("/signup");
+    } else {
+      console.log(user);
+      passport.authenticate();
+      res.redirect("/blogs");
+    }
+  });
+});
+
+app.get("/login", function (req, res) {
+  res.render("login");
+});
+
+app.post("/login", passport.authenticate("local", {failureRedirect: "/login", successRedirect: "/blogs"}), function (req, res) {
+  res.render("blogs");
+});
+
+app.get("/logout", function (req, res) {
+  console.log("Logged Out");
+  req.logout();
+  res.redirect("/blogs");
+});
 
 
+function isLoggedIn(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  } else {
+    res.redirect("/login");
+  }
+}
+
+// Start the server
 app.listen(3000, "localhost", function () {
   console.log("Listening on port 3000");
 });
